@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenBeat Web Player</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: #0c0c0c;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .player {
+            width: 100%;
+            max-width: 400px;
+            background-color: #121212;
+            border: 1px solid #282828;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        h2 {
+            color: #1db954;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        /* Живой визуализатор волн */
+        .visualizer {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            gap: 5px;
+            height: 40px;
+            margin-bottom: 25px;
+        }
+        .bar {
+            width: 8px;
+            height: 4px;
+            background-color: #1db954;
+            border-radius: 3px;
+            transition: height 0.1s ease;
+        }
+        .track-info {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        .title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 25px;
+            margin-bottom: 25px;
+        }
+        .ctrl-btn {
+            background: none;
+            border: none;
+            color: #ffffff;
+            font-size: 28px;
+            cursor: pointer;
+            transition: color 0.2s, transform 0.1s;
+        }
+        .ctrl-btn:hover { color: #1db954; transform: scale(1.1); }
+        .ctrl-btn:active { transform: scale(0.95); }
+        .play-btn { font-size: 40px; }
+        
+        .playlist {
+            border-top: 1px solid #282828;
+            padding-top: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .item {
+            padding: 12px;
+            cursor: pointer;
+            border-radius: 6px;
+            font-size: 15px;
+            transition: background-color 0.2s;
+            margin-bottom: 4px;
+        }
+        .item:hover { background-color: #1c1c1c; }
+        .item.active {
+            color: #1db954;
+            font-weight: bold;
+            background-color: rgba(29, 185, 84, 0.05);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="player">
+        <h2>GreenBeat Cloud</h2>
+        
+        <div class="visualizer">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+
+        <div class="track-info">
+            <div id="track-name" class="title">Загрузка плейлиста...</div>
+        </div>
+        
+        <div class="controls">
+            <button class="ctrl-btn" id="prev">⏮</button>
+            <button class="ctrl-btn play-btn" id="play">▶</button>
+            <button class="ctrl-btn" id="next">⏭</button>
+        </div>
+        
+        <div id="list-container" class="playlist"></div>
+    </div>
+
+    <script>
+        // ТУТ СПИСОК ТВОИХ ТРЕКОВ. Имя отображения и точное имя файла, который ты загрузил!
+        const playlist = [
+            { name: "Hero (Instrumental)", file: "hero.mp3" },
+            { name: "HEAVEN SAYS", file: "heavensays.mp3" }
+        ];
+
+        const audio = new Audio();
+        let currentIdx = 0;
+        let visInterval = null;
+
+        const listContainer = document.getElementById('list-container');
+        const playBtn = document.getElementById('play');
+        const trackName = document.getElementById('track-name');
+        const bars = document.querySelectorAll('.bar');
+
+        function initPlayer() {
+            drawList();
+            if (playlist.length > 0) setTrack(0);
+        }
+
+        function drawList() {
+            listContainer.innerHTML = '';
+            playlist.forEach((track, idx) => {
+                const div = document.createElement('div');
+                div.className = 'item';
+                if (idx === currentIdx && !audio.paused) div.className = 'item active';
+                div.innerText = track.name;
+                div.addEventListener('click', () => {
+                    setTrack(idx);
+                    playSong();
+                });
+                listContainer.appendChild(div);
+            });
+        }
+
+        function setTrack(idx) {
+            currentIdx = idx;
+            audio.src = playlist[currentIdx].file;
+            trackName.innerText = playlist[currentIdx].name;
+            // Сбрасываем активный класс в списке
+            const items = listContainer.querySelectorAll('.item');
+            items.forEach((item, i) => {
+                if(i === currentIdx) item.classList.add('active');
+                else item.classList.remove('active');
+            });
+        }
+
+        function startWaves() {
+            if(visInterval) clearInterval(visInterval);
+            visInterval = setInterval(() => {
+                bars.forEach(bar => {
+                    const h = Math.floor(Math.random() * 32) + 4;
+                    bar.style.height = h + 'px';
+                });
+            }, 100);
+        }
+
+        function stopWaves() {
+            if(visInterval) clearInterval(visInterval);
+            bars.forEach(bar => bar.style.height = '4px');
+        }
+
+        function playSong() {
+            audio.play().catch(e => console.log("Нажмите на экран для старта"));
+            playBtn.innerText = '⏸';
+            startWaves();
+            drawList();
+        }
+
+        function pauseSong() {
+            audio.pause();
+            playBtn.innerText = '▶';
+            stopWaves();
+            drawList();
+        }
+
+        playBtn.addEventListener('click', () => {
+            if (audio.paused) { playSong(); } else { pauseSong(); }
+        });
+
+        document.getElementById('next').addEventListener('click', () => {
+            let idx = (currentIdx + 1 >= playlist.length) ? 0 : currentIdx + 1;
+            setTrack(idx);
+            playSong();
+        });
+
+        document.getElementById('prev').addEventListener('click', () => {
+            let idx = (currentIdx - 1 < 0) ? playlist.length - 1 : currentIdx - 1;
+            setTrack(idx);
+            playSong();
+        });
+
+        audio.addEventListener('ended', () => {
+            document.getElementById('next').click();
+        });
+
+        window.addEventListener('load', initPlayer);
+    </script>
+</body>
+</html>
